@@ -1,0 +1,12 @@
+[Unit]
+Description=Photo Frame Slideshow
+After=multi-user.target
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/bash __HOME__/slideshow.sh
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+[Install]
+WantedBy=multi-user.target
