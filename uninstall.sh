@@ -19,16 +19,23 @@ fi
 info "Stopping services..."
 systemctl stop photo_bot.service 2>/dev/null || true
 systemctl stop slideshow.service 2>/dev/null || true
+systemctl stop wifi_setup.service 2>/dev/null || true
+systemctl stop wifi_watchdog.service 2>/dev/null || true
 systemctl disable photo_bot.service 2>/dev/null || true
 systemctl disable slideshow.service 2>/dev/null || true
+systemctl disable wifi_setup.service 2>/dev/null || true
+systemctl disable wifi_watchdog.service 2>/dev/null || true
 
 info "Removing service files..."
 rm -f /etc/systemd/system/photo_bot.service
 rm -f /etc/systemd/system/slideshow.service
+rm -f /etc/systemd/system/wifi_setup.service
+rm -f /etc/systemd/system/wifi_watchdog.service
 systemctl daemon-reload
 
 info "Removing application files..."
 rm -f "${INSTALL_HOME}/photo_bot.py"
+rm -f "${INSTALL_HOME}/wifi_setup.py"
 rm -f "${INSTALL_HOME}/slideshow.sh"
 rm -rf "${INSTALL_HOME}/photos_rotated"
 

@@ -1,7 +1,7 @@
 [Unit]
 Description=Telegram Photo Frame Bot
-After=network-online.target
-Wants=network-online.target
+After=network-online.target wifi_setup.service
+Wants=network-online.target wifi_setup.service
 [Service]
 Type=simple
 User=__USER__

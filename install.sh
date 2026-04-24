@@ -37,6 +37,14 @@ fi
 
 info "Installing photoframe for user: $INSTALL_USER ($INSTALL_HOME)"
 
+# ── NetworkManager required (for WiFi provisioning) ─────────────────────────
+
+if ! command -v nmcli >/dev/null 2>&1 || ! systemctl is-active --quiet NetworkManager; then
+    error "NetworkManager must be the active network stack.
+  Enable it via:  sudo raspi-config  →  Advanced Options  →  Network Config  →  NetworkManager
+  Then re-run this installer. (Bookworm defaults to NetworkManager; older images may need this step.)"
+fi
+
 # ── Telegram bot token ──────────────────────────────────────────────────────
 
 BOT_TOKEN=""
@@ -67,7 +75,7 @@ fi
 
 info "Installing system packages..."
 apt-get update -qq
-apt-get install -y -qq python3-pil python3-numpy python3-requests fbi > /dev/null
+apt-get install -y -qq python3-pil python3-numpy python3-requests python3-qrcode fbi fonts-dejavu-core > /dev/null
 info "Packages installed"
 
 # ── Copy application files ──────────────────────────────────────────────────
@@ -78,6 +86,10 @@ mkdir -p "${INSTALL_HOME}/photos"
 # photo_bot.py — no templating needed, uses env var and Path.home()
 cp "$REPO_DIR/photo_bot.py" "${INSTALL_HOME}/photo_bot.py"
 
+# wifi_setup.py — substitute home directory for reset-flag path
+sed "s|__HOME__|${INSTALL_HOME}|g" "$REPO_DIR/wifi_setup.py" \
+    > "${INSTALL_HOME}/wifi_setup.py"
+
 # slideshow.sh — substitute home directory
 sed "s|__HOME__|${INSTALL_HOME}|g" "$REPO_DIR/slideshow.sh" \
     > "${INSTALL_HOME}/slideshow.sh"
@@ -85,6 +97,7 @@ chmod +x "${INSTALL_HOME}/slideshow.sh"
 
 chown "$INSTALL_USER:$INSTALL_USER" \
     "${INSTALL_HOME}/photo_bot.py" \
+    "${INSTALL_HOME}/wifi_setup.py" \
     "${INSTALL_HOME}/slideshow.sh" \
     "${INSTALL_HOME}/photos"
 
@@ -133,6 +146,8 @@ add_cmdline_param "vt.global_cursor_default=0"
 # ── Enable services ─────────────────────────────────────────────────────────
 
 info "Enabling services..."
+systemctl enable wifi_setup.service
+systemctl enable wifi_watchdog.service
 systemctl enable photo_bot.service
 systemctl enable slideshow.service
 
@@ -169,6 +184,8 @@ if [ "$CMDLINE_CHANGED" = true ]; then
     fi
 else
     info "Starting services..."
+    systemctl start wifi_setup.service
+    systemctl start wifi_watchdog.service
     systemctl start photo_bot.service
     systemctl start slideshow.service
 fi

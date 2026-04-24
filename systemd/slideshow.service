@@ -1,6 +1,7 @@
 [Unit]
 Description=Photo Frame Slideshow
-After=multi-user.target
+After=multi-user.target wifi_setup.service
+Wants=wifi_setup.service
 [Service]
 Type=simple
 User=root

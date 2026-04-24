@@ -1,0 +1,14 @@
+[Unit]
+Description=Photo Frame WiFi Watchdog
+After=wifi_setup.service network-online.target
+Wants=wifi_setup.service
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 __HOME__/wifi_setup.py --watch
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:__HOME__/wifi_setup.log
+StandardError=append:__HOME__/wifi_setup.log
+[Install]
+WantedBy=multi-user.target

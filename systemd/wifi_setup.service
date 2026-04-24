@@ -1,0 +1,15 @@
+[Unit]
+Description=Photo Frame WiFi Setup
+After=NetworkManager.service
+Wants=NetworkManager.service
+Before=slideshow.service photo_bot.service network-online.target
+[Service]
+Type=oneshot
+RemainAfterExit=no
+User=root
+ExecStart=/usr/bin/python3 __HOME__/wifi_setup.py
+StandardOutput=append:__HOME__/wifi_setup.log
+StandardError=append:__HOME__/wifi_setup.log
+TimeoutStartSec=infinity
+[Install]
+WantedBy=multi-user.target
