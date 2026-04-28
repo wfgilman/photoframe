@@ -72,6 +72,7 @@ For reactions to work, add the bot to a **private group** and promote it to admi
 |---------|-------------|
 | `/delay <seconds>` | Set slideshow interval (5–3600) |
 | `/status` | Show photo count and current interval |
+| `/ip` | Show IP, hostname, and SSID (for SSH access) |
 | `/help` | Show available commands |
 
 Send photos to add. React 👎 ⛔ 🚫 ❌ to remove.

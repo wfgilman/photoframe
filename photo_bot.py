@@ -16,8 +16,11 @@ Setup:
   5. Install as systemd service for auto-start (see photo_bot.service).
 """
 
+import getpass
 import json
 import os
+import socket
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -86,6 +89,39 @@ def download_photo(file_id, dest_name):
     return dest
 
 
+def get_network_info():
+    """Return (hostname, primary_ip, ssid). Each falls back to 'unknown' on failure."""
+    hostname = socket.gethostname()
+
+    ip = "unknown"
+    try:
+        # UDP connect doesn't send packets — just resolves the outbound interface.
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(2)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pass
+
+    ssid = "unknown"
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        for line in result.stdout.splitlines():
+            if line.startswith("yes:"):
+                ssid = line.split(":", 1)[1]
+                break
+    except Exception:
+        pass
+
+    return hostname, ip, ssid
+
+
 def send_message(chat_id, text):
     try:
         requests.post(
@@ -130,6 +166,20 @@ def handle_message(msg, state):
         send_message(chat_id, f"📸 {photo_count} photos\n⏱️ {interval}s interval")
         return
 
+    if text.startswith("/ip"):
+        hostname, ip, ssid = get_network_info()
+        user = getpass.getuser()
+        send_message(
+            chat_id,
+            f"🌐 IP: {ip}\n"
+            f"📛 Hostname: {hostname}\n"
+            f"📶 SSID: {ssid}\n\n"
+            f"SSH:\n"
+            f"  ssh {user}@{ip}\n"
+            f"  ssh {user}@{hostname}.local",
+        )
+        return
+
     if text.startswith("/help") or text.startswith("/start"):
         send_message(
             chat_id,
@@ -139,6 +189,7 @@ def handle_message(msg, state):
             "Commands:\n"
             "/delay <seconds> — set slide interval\n"
             "/status — show photo count & interval\n"
+            "/ip — show IP, hostname, SSID for SSH\n"
             "/help — this message",
         )
         return
