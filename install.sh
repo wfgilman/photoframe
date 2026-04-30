@@ -183,9 +183,11 @@ if [ "$CMDLINE_CHANGED" = true ]; then
         echo "  Run 'sudo reboot' when ready."
     fi
 else
-    info "Starting services..."
-    systemctl start wifi_setup.service
-    systemctl start wifi_watchdog.service
-    systemctl start photo_bot.service
-    systemctl start slideshow.service
+    # Use restart (not start) so re-installs pick up updated code.
+    # On first install the services are inactive and restart behaves like start.
+    info "Restarting services..."
+    systemctl restart wifi_setup.service
+    systemctl restart wifi_watchdog.service
+    systemctl restart photo_bot.service
+    systemctl restart slideshow.service
 fi
