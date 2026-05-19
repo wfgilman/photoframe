@@ -44,16 +44,34 @@ img.rotate(90, expand=True).save('$ROTATED_DIR/$base')
 
 last_sig=""
 last_interval=""
+last_restart=0
+cycle_secs=0
+FILES=()
 
 while true; do
     rotate_photos
     sig=$(source_signature)
     interval=$(get_interval)
+    now=$(date +%s)
+    elapsed=$((now - last_restart))
 
     need_restart=false
-    [ "$sig" != "$last_sig" ] && need_restart=true
-    [ "$interval" != "$last_interval" ] && need_restart=true
     pgrep -x fbi >/dev/null 2>&1 || need_restart=true
+    [ "$interval" != "$last_interval" ] && need_restart=true
+
+    if [ "$sig" != "$last_sig" ]; then
+        # A deletion (reaction) must restart now — fbi would otherwise
+        # error on the missing slot. Additions wait until the current
+        # shuffle finishes one full cycle, otherwise every new upload
+        # re-shuffles and only photos that land early ever appear.
+        deletion=false
+        for f in "${FILES[@]}"; do
+            [ -f "$f" ] || { deletion=true; break; }
+        done
+        if $deletion || [ "$elapsed" -ge "$cycle_secs" ]; then
+            need_restart=true
+        fi
+    fi
 
     if $need_restart; then
         # Pre-shuffle so fbi cycles through every photo before repeating.
@@ -70,6 +88,8 @@ while true; do
         echo "Showing ${#FILES[@]} photos, ${interval}s interval (sig=${sig:0:8})"
         last_sig=$sig
         last_interval=$interval
+        last_restart=$now
+        cycle_secs=$(( ${#FILES[@]} * interval ))
     fi
 
     sleep "$RESCAN_EVERY"
