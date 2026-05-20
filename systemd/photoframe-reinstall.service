@@ -1,0 +1,10 @@
+[Unit]
+Description=Reinstall photoframe from git
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/photoframe-reinstall
+StandardOutput=journal
+StandardError=journal

@@ -180,6 +180,24 @@ def handle_message(msg, state):
         )
         return
 
+    if text.startswith("/reinstall"):
+        send_message(
+            chat_id,
+            "🔄 Pulling latest from git and reinstalling…\n"
+            "Back online in ~30s. Send /help to confirm.",
+        )
+        # Persist last_update_id NOW so this command isn't re-processed
+        # after photo_bot.service restarts mid-install.
+        save_state(state)
+        subprocess.Popen(
+            ["sudo", "-n", "/usr/bin/systemctl", "start", "--no-block",
+             "photoframe-reinstall.service"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        print("[*] reinstall triggered")
+        return
+
     if text.startswith("/help") or text.startswith("/start"):
         send_message(
             chat_id,
@@ -190,6 +208,7 @@ def handle_message(msg, state):
             "/delay <seconds> — set slide interval\n"
             "/status — show photo count & interval\n"
             "/ip — show IP, hostname, SSID for SSH\n"
+            "/reinstall — pull latest from git & restart services\n"
             "/help — this message",
         )
         return

@@ -31,6 +31,9 @@ rm -f /etc/systemd/system/photo_bot.service
 rm -f /etc/systemd/system/slideshow.service
 rm -f /etc/systemd/system/wifi_setup.service
 rm -f /etc/systemd/system/wifi_watchdog.service
+rm -f /etc/systemd/system/photoframe-reinstall.service
+rm -f /usr/local/sbin/photoframe-reinstall
+rm -f /etc/sudoers.d/photoframe-reinstall
 systemctl daemon-reload
 
 info "Removing application files..."

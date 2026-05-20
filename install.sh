@@ -75,7 +75,7 @@ fi
 
 info "Installing system packages..."
 apt-get update -qq
-apt-get install -y -qq python3-pil python3-numpy python3-requests python3-qrcode fbi fonts-dejavu-core > /dev/null
+apt-get install -y -qq git python3-pil python3-numpy python3-requests python3-qrcode fbi fonts-dejavu-core > /dev/null
 info "Packages installed"
 
 # ── Copy application files ──────────────────────────────────────────────────
@@ -116,6 +116,48 @@ for svc in "$REPO_DIR"/systemd/*.service; do
 done
 
 systemctl daemon-reload
+
+# ── Self-update wrapper (for the bot's /reinstall command) ──────────────────
+
+info "Installing self-update wrapper..."
+
+# Bake an unauthenticated HTTPS fetch URL into the wrapper so /reinstall
+# doesn't depend on SSH keys being available on the device. The repo is
+# public, so HTTPS reads need no credentials.
+ORIGIN_URL=$(sudo -u "$INSTALL_USER" git -C "$REPO_DIR" config --get remote.origin.url 2>/dev/null || true)
+case "$ORIGIN_URL" in
+    git@github.com:*)
+        FETCH_URL="https://github.com/${ORIGIN_URL#git@github.com:}"
+        ;;
+    https://github.com/*)
+        FETCH_URL="$ORIGIN_URL"
+        ;;
+    *)
+        warn "Unknown origin URL '${ORIGIN_URL}' — /reinstall will use 'origin' as configured"
+        FETCH_URL="origin"
+        ;;
+esac
+info "  /reinstall fetch URL: ${FETCH_URL}"
+
+cat > /usr/local/sbin/photoframe-reinstall <<EOF
+#!/bin/bash
+# Triggered by photoframe-reinstall.service. Fetches latest main from a
+# fixed HTTPS URL (baked in at install time) so /reinstall never depends
+# on SSH keys being present on the device.
+set -e
+cd "${REPO_DIR}"
+runuser -u "${INSTALL_USER}" -- git fetch --quiet "${FETCH_URL}" main
+runuser -u "${INSTALL_USER}" -- git reset --hard FETCH_HEAD
+exec ./install.sh
+EOF
+chmod 0755 /usr/local/sbin/photoframe-reinstall
+
+# Allow the bot user to kick off the reinstall service without a password.
+# Pinned to the exact argv so this entry can only ever start that one unit.
+cat > /etc/sudoers.d/photoframe-reinstall <<EOF
+${INSTALL_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block photoframe-reinstall.service
+EOF
+chmod 0440 /etc/sudoers.d/photoframe-reinstall
 
 # ── Configure boot parameters ───────────────────────────────────────────────
 
@@ -175,12 +217,20 @@ echo ""
 
 if [ "$CMDLINE_CHANGED" = true ]; then
     warn "Boot parameters changed — reboot required."
-    read -rp "Reboot now? [y/N] " REBOOT
-    if [[ "$REBOOT" =~ ^[Yy] ]]; then
-        info "Rebooting..."
-        reboot
+    if [ -t 0 ]; then
+        read -rp "Reboot now? [y/N] " REBOOT
+        if [[ "$REBOOT" =~ ^[Yy] ]]; then
+            info "Rebooting..."
+            reboot
+        else
+            echo "  Run 'sudo reboot' when ready."
+        fi
     else
-        echo "  Run 'sudo reboot' when ready."
+        # Non-interactive (e.g. triggered by /reinstall): the user has no
+        # way to answer, and new boot params won't take effect until reboot.
+        warn "Non-interactive — rebooting in 5s to apply boot params"
+        sleep 5
+        reboot
     fi
 else
     # Use restart (not start) so re-installs pick up updated code.
