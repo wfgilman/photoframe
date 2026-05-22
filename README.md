@@ -73,9 +73,16 @@ For reactions to work, add the bot to a **private group** and promote it to admi
 | `/delay <seconds>` | Set slideshow interval (5–3600) |
 | `/status` | Show photo count and current interval |
 | `/ip` | Show IP, hostname, and SSID (for SSH access) |
+| `/reinstall` | Pull latest code from `main` and restart services |
 | `/help` | Show available commands |
 
 Send photos to add. React 👎 ⛔ 🚫 ❌ to remove.
+
+## Over-the-air updates
+
+`/reinstall` lets you deploy code changes without SSH: `git push` from your laptop, then send `/reinstall` to the bot. The frame fetches the latest `main` over HTTPS, re-runs `install.sh`, and restarts services. Useful when the Pi is on a network where SSH won't reach it (corporate guest WiFi with client isolation, phone hotspot, etc.) — Telegram only needs outbound internet, which most networks allow.
+
+A small sudo-pinned wrapper (`/usr/local/sbin/photoframe-reinstall`) and oneshot systemd unit (`photoframe-reinstall.service`) do the work in their own cgroup, so they survive the bot restart that happens mid-install.
 
 ## Display configuration
 
@@ -83,14 +90,16 @@ The slideshow is configured for a 1024×600 framebuffer mounted in portrait orie
 
 ## What the installer does
 
-1. Installs apt packages: `python3-pil`, `python3-numpy`, `python3-requests`, `python3-qrcode`, `fbi`, `fonts-dejavu-core`
+1. Installs apt packages: `git`, `python3-pil`, `python3-numpy`, `python3-requests`, `python3-qrcode`, `fbi`, `fonts-dejavu-core`
 2. Copies `photo_bot.py`, `wifi_setup.py`, and `slideshow.sh` to `~/`
 3. Installs systemd services with your username and bot token
-4. Adds boot parameters to `/boot/firmware/cmdline.txt`:
+4. Installs the self-update wrapper (`/usr/local/sbin/photoframe-reinstall`) and pinned sudoers entry (`/etc/sudoers.d/photoframe-reinstall`) so the bot can trigger `/reinstall`
+5. Adds boot parameters to `/boot/firmware/cmdline.txt`:
    - `fbcon=map:9` — maps console to nonexistent framebuffer (frees fb0)
    - `consoleblank=0` — disables screen blanking
    - `logo.nologo quiet loglevel=1` — hides boot messages
    - `vt.global_cursor_default=0` — hides blinking cursor
+6. Restarts services so re-installs (including `/reinstall`) pick up the new code
 
 ## Installed file layout
 
