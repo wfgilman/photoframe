@@ -71,12 +71,20 @@ For reactions to work, add the bot to a **private group** and promote it to admi
 | Command | Description |
 |---------|-------------|
 | `/delay <seconds>` | Set slideshow interval (5–3600) |
-| `/status` | Show photo count and current interval |
+| `/status` | Show photo count, interval, shuffle progress, and how long a full rotation takes |
 | `/ip` | Show IP, hostname, and SSID (for SSH access) |
 | `/reinstall` | Pull latest code from `main` and restart services |
 | `/help` | Show available commands |
 
 Send photos to add. React 👎 ⛔ 🚫 ❌ to remove.
+
+## Shuffle
+
+Photos play in **rounds**: each round shows every photo exactly once in a fresh random order, then the next round reshuffles. No photo repeats until all the others have had a turn, and the next round never opens with the photo that just closed the last one.
+
+Progress is saved to `~/.slideshow_shown`, so reboots, `/reinstall`, `/delay` changes and deletions resume the current round rather than starting over. New uploads join the round in progress at a random spot.
+
+A full rotation takes `photo count × interval` — `/status` shows it. If that's shorter than the hours you actually look at the frame, you'll see every photo more than once a day; add photos or raise `/delay` to stretch it.
 
 ## Over-the-air updates
 
@@ -113,6 +121,7 @@ The slideshow is configured for a 1024×600 framebuffer mounted in portrait orie
 ~/wifi_setup.log           # WiFi setup log
 ~/.photo_bot_state.json    # Bot state (auto-generated)
 ~/.photo_bot_config.json   # Runtime config (from /delay command)
+~/.slideshow_shown         # Photos shown so far in the current shuffle round
 ~/.reset_wifi              # Touch to clear saved WiFi on next boot
 ```
 
