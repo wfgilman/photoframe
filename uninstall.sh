@@ -41,6 +41,7 @@ rm -f "${INSTALL_HOME}/photo_bot.py"
 rm -f "${INSTALL_HOME}/wifi_setup.py"
 rm -f "${INSTALL_HOME}/slideshow.sh"
 rm -rf "${INSTALL_HOME}/photos_rotated"
+rm -f "${INSTALL_HOME}/.slideshow_shown"
 
 echo ""
 info "Uninstall complete."

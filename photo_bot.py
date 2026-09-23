@@ -31,6 +31,7 @@ BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
 PHOTOS_DIR = Path.home() / "photos"
 STATE_FILE = Path.home() / ".photo_bot_state.json"
 CONFIG_FILE = Path.home() / ".photo_bot_config.json"
+SHOWN_FILE = Path.home() / ".slideshow_shown"  # written by slideshow.sh
 POLL_INTERVAL = 30  # seconds
 DELETE_REACTIONS = {"👎", "⛔", "🚫", "❌"}
 
@@ -56,6 +57,14 @@ def load_config():
 
 def save_config(config):
     CONFIG_FILE.write_text(json.dumps(config, indent=2))
+
+
+def format_duration(seconds):
+    """Render seconds as e.g. '45s', '12m' or '3h 20m'."""
+    if seconds < 60:
+        return f"{seconds}s"
+    hours, minutes = divmod(round(seconds / 60), 60)
+    return f"{hours}h {minutes}m" if hours else f"{minutes}m"
 
 
 def get_updates(offset):
@@ -163,7 +172,14 @@ def handle_message(msg, state):
         config = load_config()
         interval = config.get("interval", 15)
         photo_count = len(list(PHOTOS_DIR.glob("*.jpg")))
-        send_message(chat_id, f"📸 {photo_count} photos\n⏱️ {interval}s interval")
+        shown = len(SHOWN_FILE.read_text().split()) if SHOWN_FILE.exists() else 0
+        send_message(
+            chat_id,
+            f"📸 {photo_count} photos\n"
+            f"⏱️ {interval}s interval\n"
+            f"🔀 {shown} of {photo_count} shown this round\n"
+            f"🔁 Every photo once per {format_duration(photo_count * interval)}",
+        )
         return
 
     if text.startswith("/ip"):
@@ -206,7 +222,7 @@ def handle_message(msg, state):
             "React 👎 ⛔ 🚫 ❌ → remove photo\n\n"
             "Commands:\n"
             "/delay <seconds> — set slide interval\n"
-            "/status — show photo count & interval\n"
+            "/status — photo count, interval & shuffle progress\n"
             "/ip — show IP, hostname, SSID for SSH\n"
             "/reinstall — pull latest from git & restart services\n"
             "/help — this message",
